@@ -1,0 +1,132 @@
+namespace Osysharp.MachineTranslation;
+
+/// What a detector made of a text: its best guess, and whether it is sure enough to act on alone.
+public class LanguageGuess {
+  /// A BCP-47 tag ("sv", "ar", "pt"), or "" when the text holds no letters at all.
+  public string Language = "";
+  /// Sure: a script only one language here writes in, or a clear lead in its commonest words. Not sure: too short, or
+  /// two languages too close to tell apart — ask something that reads, rather than guess.
+  public bool Confident;
+}
+
+/// One language the detector recognises by its commonest words and the letters only it (or few others) use.
+public class LanguageProfile {
+  public string Language = "";
+  /// Its commonest short words, lower-cased — each one in a text counts once.
+  public List<string> Words = [];
+  /// Letters that point to it — each one in a text counts twice.
+  public string Letters = "";
+}
+
+/// Tells what language a text is written in, offline: first by its SCRIPT (Arabic, Hebrew, Cyrillic, Greek, Devanagari,
+/// Thai, Japanese, Korean, Chinese), then — for the Latin alphabet — by the commonest words and the telling letters of
+/// each language in `Profiles`. Deterministic: the same text, the same answer, everywhere.
+public class LanguageDetector {
+  /// The Latin-alphabet languages it tells apart. Add a profile to recognise another.
+  public List<LanguageProfile> Profiles = DefaultProfiles();
+  /// The fewest points the leading language needs before the guess is sure: a common word is 2, a telling letter 1.
+  public int SureAt = 4;
+
+  /// The language of `text`, and whether that is sure.
+  public LanguageGuess Guess(string text) {
+    var t = (text ?? "").ToLower();
+    var byScript = ByScript(t);
+    if (byScript != "") { return new LanguageGuess { Language = byScript, Confident = true }; }
+
+    List<string> words = [];
+    var word = "";
+    foreach (var c in t + " ") {
+      if (char.IsLetter(c)) { word = word + c; continue; }
+      if (word != "") { words.Add(word); }
+      word = "";
+    }
+    if (words.Count == 0) { return new LanguageGuess(); }
+
+    var best = "";
+    var bestScore = 0;
+    var second = 0;
+    foreach (var p in Profiles) {
+      var score = 0;
+      // WORDS outweigh LETTERS. A letter is shared — ä and ö are Swedish, Finnish and German alike — so a Swedish
+      // message full of them ("försöker … för … öppnas") lifted Finnish as far as Swedish and the guess was never sure;
+      // the words are what tell such languages apart.
+      foreach (var w in words) { if (p.Words.Contains(w)) { score = score + 2; } }
+      foreach (var c in t) { if (p.Letters.Contains(c.ToString())) { score = score + 1; } }
+      if (score > bestScore) { second = bestScore; bestScore = score; best = p.Language; }
+      else if (score > second) { second = score; }
+    }
+    if (best == "") { return new LanguageGuess { Language = "en", Confident = false }; }
+    return new LanguageGuess { Language = best, Confident = bestScore >= SureAt && bestScore >= second * 2 };
+  }
+
+  /// The language a non-Latin script says, or "" for the Latin alphabet (and for a text with no letters).
+  public string ByScript(string text) {
+    var latin = 0; var arabic = 0; var hebrew = 0; var cyrillic = 0; var greek = 0; var devanagari = 0; var thai = 0;
+    var kana = 0; var hangul = 0; var han = 0;
+    var persian = 0; var urdu = 0; var ukrainian = 0;
+    foreach (var c in text) {
+      var u = (int)c;
+      if ((u >= 0x41 && u <= 0x5A) || (u >= 0x61 && u <= 0x7A) || (u >= 0xC0 && u <= 0x24F)) { latin = latin + 1; }
+      else if ((u >= 0x600 && u <= 0x6FF) || (u >= 0x750 && u <= 0x77F) || (u >= 0xFB50 && u <= 0xFDFF) || (u >= 0xFE70 && u <= 0xFEFF)) {
+        arabic = arabic + 1;
+        if (u == 0x67E || u == 0x686 || u == 0x698 || u == 0x6AF) { persian = persian + 1; }
+        if (u == 0x679 || u == 0x688 || u == 0x691 || u == 0x6BA || u == 0x6D2) { urdu = urdu + 1; }
+      }
+      else if (u >= 0x590 && u <= 0x5FF) { hebrew = hebrew + 1; }
+      else if (u >= 0x400 && u <= 0x4FF) {
+        cyrillic = cyrillic + 1;
+        if (u == 0x456 || u == 0x457 || u == 0x454 || u == 0x491) { ukrainian = ukrainian + 1; }
+      }
+      else if (u >= 0x370 && u <= 0x3FF) { greek = greek + 1; }
+      else if (u >= 0x900 && u <= 0x97F) { devanagari = devanagari + 1; }
+      else if (u >= 0xE00 && u <= 0xE7F) { thai = thai + 1; }
+      else if (u >= 0x3040 && u <= 0x30FF) { kana = kana + 1; }
+      else if ((u >= 0xAC00 && u <= 0xD7AF) || (u >= 0x1100 && u <= 0x11FF)) { hangul = hangul + 1; }
+      else if (u >= 0x4E00 && u <= 0x9FFF) { han = han + 1; }
+    }
+    var other = arabic + hebrew + cyrillic + greek + devanagari + thai + kana + hangul + han;
+    if (other == 0 || other < latin) { return ""; }
+    if (kana > 0) { return "ja"; }
+    if (hangul > 0) { return "ko"; }
+    var top = Math.Max(Math.Max(Math.Max(arabic, hebrew), Math.Max(cyrillic, greek)), Math.Max(Math.Max(devanagari, thai), han));
+    if (top == arabic) { return urdu > 0 ? "ur" : persian > 0 ? "fa" : "ar"; }
+    if (top == hebrew) { return "he"; }
+    if (top == cyrillic) { return ukrainian > 0 ? "uk" : "ru"; }
+    if (top == greek) { return "el"; }
+    if (top == devanagari) { return "hi"; }
+    if (top == thai) { return "th"; }
+    return "zh";
+  }
+}
+
+/// The twelve Latin-alphabet languages the detector knows out of the box.
+public List<LanguageProfile> DefaultProfiles() {
+  return [
+    new LanguageProfile { Language = "en", Words = ["the", "and", "is", "are", "was", "of", "to", "it", "that", "have", "not",
+      "you", "with", "for", "this", "my", "we", "but", "hello", "hi", "thanks", "please", "would", "could", "i", "can", "what"] },
+    new LanguageProfile { Language = "sv", Letters = "äö", Words = ["och", "är", "att", "det", "jag", "inte", "ett", "på",
+      "med", "för", "som", "har", "min", "mitt", "mina", "vi", "hej", "kan", "till", "av", "om", "så", "var", "tack", "fått",
+      "inget", "någon", "också", "eller", "mig", "hur", "vad"] },
+    new LanguageProfile { Language = "da", Letters = "æø", Words = ["og", "er", "at", "det", "jeg", "ikke", "et", "på", "med",
+      "for", "som", "har", "min", "vi", "du", "kan", "til", "af", "om", "så", "hej", "mig", "tak", "hvad", "hvordan", "også"] },
+    new LanguageProfile { Language = "nb", Letters = "æø", Words = ["og", "er", "at", "det", "jeg", "ikke", "et", "på", "med",
+      "for", "som", "har", "min", "vi", "du", "kan", "til", "av", "om", "så", "hei", "meg", "takk", "hva", "hvordan", "også"] },
+    new LanguageProfile { Language = "de", Letters = "ßü", Words = ["und", "ist", "der", "die", "das", "nicht", "ich", "ein",
+      "eine", "zu", "mit", "für", "auf", "es", "sie", "wir", "mein", "meine", "hallo", "haben", "von", "den", "dem", "danke",
+      "bitte", "ihr", "auch"] },
+    new LanguageProfile { Language = "nl", Words = ["en", "is", "de", "het", "een", "niet", "ik", "van", "dat", "met", "voor",
+      "op", "zijn", "wij", "mijn", "hallo", "heb", "te", "je", "bedankt", "graag", "ook"] },
+    new LanguageProfile { Language = "fr", Letters = "êèàù", Words = ["et", "est", "le", "la", "les", "des", "je", "ne", "pas",
+      "un", "une", "pour", "avec", "que", "qui", "nous", "vous", "mon", "ma", "bonjour", "ce", "dans", "du", "merci", "mais"] },
+    new LanguageProfile { Language = "es", Letters = "ñ¿¡", Words = ["y", "es", "el", "la", "los", "las", "de", "que", "no",
+      "un", "una", "para", "con", "por", "mi", "hola", "en", "lo", "pero", "se", "del", "gracias", "está", "estoy"] },
+    new LanguageProfile { Language = "pt", Letters = "ãõ", Words = ["e", "é", "o", "os", "as", "de", "que", "não", "um", "uma",
+      "para", "com", "por", "meu", "minha", "olá", "em", "do", "da", "se", "mas", "obrigado", "obrigada", "está", "estou"] },
+    new LanguageProfile { Language = "it", Words = ["e", "è", "il", "la", "le", "di", "che", "non", "un", "una", "per", "con",
+      "mio", "mia", "ciao", "in", "del", "della", "sono", "ho", "grazie", "ma", "questo"] },
+    new LanguageProfile { Language = "fi", Letters = "äö", Words = ["ja", "on", "ei", "se", "minä", "olen", "että", "hei",
+      "kiitos", "tämä", "mutta", "kanssa", "oli", "ole", "mitä", "kun", "voi", "minun", "en", "ole", "ei"] },
+    new LanguageProfile { Language = "pl", Letters = "łąęśżźćń", Words = ["i", "jest", "nie", "się", "to", "w", "na", "że",
+      "z", "do", "mój", "moja", "cześć", "jak", "ale", "dla", "jestem", "mam", "dziękuję", "proszę"] },
+  ];
+}

@@ -1,0 +1,61 @@
+// Osysharp.MachineTranslation — the offline detector: a script one language writes in, or a clear lead in a Latin-script
+// language's commonest words and letters — and "not sure" when a text is too short to tell.
+
+using Osysharp.MachineTranslation;
+
+LanguageGuess G(string text) { return new LanguageDetector().Guess(text); }
+
+[Test]
+void european_languages_are_told_by_their_words() {
+  Assert.Equal("en", G("Hello, I have not received my booking and I would like to know where it is.").Language);
+  Assert.Equal("sv", G("Hej, jag har inte fått min bokning och vill veta var den är.").Language);
+  Assert.Equal("de", G("Hallo, ich habe meine Buchung nicht bekommen und möchte wissen, wo sie ist.").Language);
+  Assert.Equal("fr", G("Bonjour, je n'ai pas reçu ma réservation et je voudrais savoir où elle est.").Language);
+  Assert.Equal("es", G("Hola, no he recibido mi reserva y quiero saber dónde está.").Language);
+  Assert.Equal("pt", G("Olá, não recebi a minha reserva e quero saber onde ela está.").Language);
+  Assert.Equal("nl", G("Hallo, ik heb mijn boeking niet ontvangen en wil graag weten waar die is.").Language);
+  Assert.Equal("pl", G("Cześć, nie dostałem mojej rezerwacji i chcę wiedzieć, gdzie jest.").Language);
+  Assert.True(G("Hej, jag har inte fått min bokning och vill veta var den är.").Confident);
+}
+
+/// A Swedish message whose ä and ö Finnish shares is still SURE — told by its words. It decides whether a desk knows a
+/// new customer's language in the commit that brings their first message, before anything routes it.
+[Test]
+void a_swedish_message_full_of_letters_finnish_shares_is_sure() {
+  var g = G("Hej! Jag försöker ladda ner fakturan för september men PDF:en öppnas aldrig. Kan ni skicka den igen?");
+  Assert.Equal("sv", g.Language);
+  Assert.True(g.Confident);
+}
+
+[Test]
+void other_scripts_are_told_by_their_letters() {
+  Assert.Equal("ar", G("مرحبا، لم أستلم حجزي وأريد أن أعرف أين هو.").Language);
+  Assert.Equal("fa", G("سلام، من رزرو خود را دریافت نکردم و می‌خواهم بدانم کجاست. چرا؟").Language);
+  Assert.Equal("ru", G("Здравствуйте, я не получил своё бронирование.").Language);
+  Assert.Equal("uk", G("Привіт, я не отримав своє бронювання і хочу знати, де воно.").Language);
+  Assert.Equal("el", G("Γεια σας, δεν έλαβα την κράτησή μου.").Language);
+  Assert.Equal("he", G("שלום, לא קיבלתי את ההזמנה שלי.").Language);
+  Assert.Equal("ja", G("こんにちは、予約がまだ届いていません。").Language);
+  Assert.Equal("ko", G("안녕하세요, 예약을 받지 못했습니다.").Language);
+  Assert.Equal("zh", G("你好，我还没有收到我的预订。").Language);
+  Assert.True(G("مرحبا").Confident);
+}
+
+[Test]
+void a_greeting_alone_is_not_sure() {
+  Assert.False(G("Hej!").Confident);
+  Assert.False(G("Tack").Confident);
+}
+
+[Test]
+void a_text_with_no_letters_has_no_language() {
+  Assert.Equal("", G("12 345 — ?!").Language);
+  Assert.False(G("").Confident);
+}
+
+[Test]
+void a_profile_an_app_adds_is_recognised() {
+  var d = new LanguageDetector();
+  d.Profiles.Add(new LanguageProfile { Language = "is", Letters = "ðþ", Words = ["og", "ég", "ekki", "að", "hæ", "takk"] });
+  Assert.Equal("is", d.Guess("Hæ, ég hef ekki fengið bókunina mína og þarf að vita hvar hún er.").Language);
+}

@@ -1,0 +1,15 @@
+using Osysharp.MachineTranslation;
+
+app.Secrets = [ new Secret("GuideModel") ];
+
+/// What the stubbed model was asked, in order — so a test proves what was sent, and what never was.
+entity Asked {
+  [Required, MaxLength(8000)] string Prompt;
+  security { allow read, create when IsAnonymous || IsAuthenticated; }
+}
+
+/// The guide's translator: the app's default model, with the key in the `GuideModel` secret.
+ModelTranslator GuideTranslator() { return new ModelTranslator { KeySecret = "GuideModel" }; }
+
+/// A comment's language, read through the guide's translator.
+string LanguageOf(string text) { return GuideTranslator().Detect(text); }

@@ -1,0 +1,7 @@
+// The producer's test project for Osysharp.MachineTranslation — a travel guide's reader comments, each told by its
+// language and read in English. No model is ever called: a test answers for it with `LlmClient.Complete.Stub`.
+app MachineTranslationKitTests {
+  model "model/**/*.osy";
+  tests "**/*.test.osy";
+  use Osysharp.MachineTranslation@0;
+}
