@@ -22,8 +22,8 @@ var english  = t.Translate(text, language, "en", [new TranslationTerm { Term = "
 
 ## Your provider, your key
 
-Nothing is provided. Translation runs on the model **you** choose — any provider your app allows (`app.Models`,
-`app.DefaultModel`) — with **your** key, which you give your app as a secret. Until the key has a value, `IsReady()` is
+Nothing is provided. Translation runs on the model **you** choose — any provider your app lists in `app.Llm`
+([`Osysharp.Llm`](../llm)) — with **your** key, which you give your app as a secret. Until the key has a value, `IsReady()` is
 false: detection still works offline, nothing is sent anywhere, and every caller keeps the original text.
 
 ## What it does
@@ -32,7 +32,7 @@ false: detection still works offline, nothing is sent anywhere, and every caller
 |---|---|
 | **Detection, offline** | `LanguageDetector` tells a text by its script — Arabic, Persian, Cyrillic, Greek, Hebrew, Devanagari, Thai, Japanese, Korean, Chinese — or by the commonest words and letters of twelve European languages. Free, instant and the same on every machine. It says when it is not sure |
 | **The model only when needed** | `ModelTranslator.Detect` asks the model only when a text is too short or too mixed to tell, and uses its answer only when it is a language tag |
-| **Translation through your model** | one plain call through `LlmClient.Complete` — your key, your router, your budget. No tools, no memory: the text is treated as text, never as instructions |
+| **Translation through your model** | one plain call through `Llm.Complete` — your key, your router, your budgets, on your meter. No tools, no memory: the text is treated as text, never as instructions |
 | **Terms kept** | names and product terms stay as written, or are written the way you say |
 | **Long texts** | sent a paragraph at a time past `MaxChunk` |
 | **Same language, no call** | "en-GB" into "en" is the text itself |
@@ -41,7 +41,7 @@ false: detection still works offline, nothing is sent anywhere, and every caller
 
 ## Testing with it
 
-No test should call a real model. Answer for it with `LlmClient.Complete.Stub(prompt => …)`, and make the translator
+No test should call a real model. Answer for the call with `CompleteWith.Stub((request, call) => new LlmResult { Response = Scripted.Text("…") })`, and make the translator
 ready with `ModelKeyIsSet.Stub(name => true)`.
 
 ## Its tests

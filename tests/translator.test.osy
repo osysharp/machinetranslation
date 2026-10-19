@@ -1,20 +1,24 @@
-// Osysharp.MachineTranslation — the model translator. No model is called: `LlmClient.Complete.Stub` answers, and records
+// Osysharp.MachineTranslation — the model translator. No model is called: `CompleteWith.Stub` answers, and records
 // each prompt in `Asked`, so a test reads what was sent — and proves what never was.
 
 using Osysharp.MachineTranslation;
+using Osysharp.Llm;
 
 /// The model "translates" by tagging what it was given with the target language, and names Swedish when asked which
 /// language — so a test can tell a translation, a detection and no call at all apart.
 [TestFixture]
 void ModelAnswers() {
-  LlmClient.Complete.Stub(p => {
-    new Asked { Prompt = p };
-    if (p.StartsWith("Which language")) { return "sv"; }
-    var start = p.IndexOf("<text>\n") + 7;
-    var end = p.IndexOf("\n</text>");
-    var to = p.Substring(p.IndexOf("into the language tagged ") + 25, 2);
-    return $"[{to}] " + p.Substring(start, end - start);
-  });
+  CompleteWith.Stub((request, call) => new LlmResult { Response = Scripted.Text(Tagged(Scripted.Asked(request))) });
+}
+
+/// What the model in these tests answers for one prompt, noting that it was asked.
+string Tagged(string p) {
+  new Asked { Prompt = p };
+  if (p.StartsWith("Which language")) { return "sv"; }
+  var start = p.IndexOf("<text>\n") + 7;
+  var end = p.IndexOf("\n</text>");
+  var to = p.Substring(p.IndexOf("into the language tagged ") + 25, 2);
+  return $"[{to}] " + p.Substring(start, end - start);
 }
 
 [Test(ModelAnswers)]
@@ -59,7 +63,7 @@ void an_unsure_text_is_asked_and_a_tag_answer_is_used() {
 
 [Test(ModelAnswers)]
 void a_model_answer_that_is_not_a_language_tag_is_not_believed() {
-  LlmClient.Complete.Stub(p => "I think this is probably Danish, or maybe Norwegian.");
+  CompleteWith.Stub((request, call) => new LlmResult { Response = Scripted.Text("I think this is probably Danish, or maybe Norwegian.") });
   var t = new ModelTranslator();
   var guess = t.Detector.Guess("Hej!");
   Assert.False(guess.Confident);

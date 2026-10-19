@@ -1,5 +1,7 @@
 namespace Osysharp.MachineTranslation;
 
+using Osysharp.Llm;
+
 /// A term a translation keeps — a product or brand name — and, when it has one, what it is called in the other language.
 public class TranslationTerm {
   public string Term = "";
@@ -8,12 +10,13 @@ public class TranslationTerm {
 }
 
 /// Detects with `Detector` (asking the model only when it is not sure) and translates with the app's own model, through
-/// `LlmClient.Complete` — so the app's key, its router and its budget decide every call.
+/// `Llm.Complete` — so the app's key, its router and its budgets decide every call, and its meter records each one.
 ///
 ///     new ModelTranslator { KeySecret = "Anthropic" }                    // the app's default model
 ///     new ModelTranslator { KeySecret = "Anthropic", Model = "claude-haiku-4-5" }   // a cheaper one it also allows
 public class ModelTranslator {
-  /// The model to translate with — one the app allows (`app.Models`). Null: the app's default model.
+  /// The model to translate with — one of the app's models (`app.Llm`), by its name. Null: whichever the app's
+  /// router chooses.
   public string? Model = null;
   /// The NAME of the secret in `app.Secrets` that holds the model's key — so the translator knows it cannot work while
   /// it has no value, and says so, rather than failing on every message. "": assume the model is always reachable.
@@ -76,7 +79,7 @@ public class ModelTranslator {
 
   /// One call to the model this translator uses.
   string Ask(string prompt) {
-    return Model == null ? LlmClient.Complete(prompt) : LlmClient.Complete(prompt, Model!);
+    return Model == null ? await Llm.Complete(prompt) : await Llm.Complete(prompt, Model!);
   }
 
   /// A model's answer as the translation alone — without markers it may have echoed, or a fence around it.

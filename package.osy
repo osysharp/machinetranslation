@@ -2,23 +2,25 @@
 //
 //     var translator = new ModelTranslator { KeySecret = "Anthropic" };
 //     var language = translator.Detect(text);                        // "sv"
-//     var english  = translator.Translate(text, language, "en", []); // through LlmClient.Complete, the app's own key
+//     var english  = translator.Translate(text, language, "en", []); // through Llm.Complete, the app's own key
 //
 // ⚑ DETECTION IS LOCAL FIRST. `LanguageDetector` reads the script a text is written in (Arabic, Cyrillic, Greek, Hebrew,
 //   Devanagari, Thai, Japanese, Korean, Chinese) and, for the Latin alphabet, the commonest words and letters of twelve
 //   European languages — offline, free, the same answer on every machine. The model is asked only when the text is too
 //   short or too mixed for that to be sure, and its answer is used only when it is a language tag.
 //
-// ⚑ TRANSLATION IS A PLAIN MODEL CALL — one prompt in, one text out, through `LlmClient.Complete` and so through the
-//   app's own model, its router and its budget. No tools, no memory: the text is untrusted, and nothing it says can make
+// ⚑ TRANSLATION IS A PLAIN MODEL CALL — one prompt in, one text out, through `Llm.Complete` (Osysharp.Llm) and so
+//   through the app's own models, its router, its budgets and its meter. No tools, no memory: the text is untrusted, and nothing it says can make
 //   the call do anything but answer with words.
 //
 // ⚑ NOT READY IS A STATE, NOT AN ERROR. With no key (`KeySecret` names a secret that has no value), `IsReady()` is false
 //   and a caller keeps the original — a translator that is down must never stop a message from being written.
 package Osysharp.MachineTranslation {
-  version     "0.2.1";
-  minPlatform "0.9.0";
+  version     "0.4.0";
+  minPlatform "0.14.0";
   summary     "language detection that works offline (scripts, and the commonest words of twelve European languages) and translation through the app's own model — glossary terms kept as written, a missing key a state rather than an error.";
+  // Every translation is a call through the model kit: routed, budgeted and metered as the app says.
+  use Osysharp.Llm@2;
   model "model/*.osy";
   tests "tests";
 }

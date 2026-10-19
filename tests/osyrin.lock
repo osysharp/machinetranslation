@@ -2,16 +2,20 @@
   "platform": {
     "version": "0.9.0"
   },
-  "entries": [
-    {
-      "name": "Osysharp.MachineTranslation",
-      "kind": "package",
-      "version": "0.2.1",
-      "hash": "sha256:f390f31397c0f9488849f866523cdc37c53c4c4fd4a1127fb999bf9a9473997d",
-      "minPlatform": "0.9.0",
-      "shadow": "app-forkable",
-      "source": "workspace:kits/machine-translation",
-      "constraint": "0"
-    }
-  ]
+  "entries": [],
+  "bridges": {
+    "searched": [
+      "workspace",
+      "platform"
+    ],
+    "skipped": [
+      "github: offline \u2014 the public catalog was not searched for bridges. Run \u0060osy lock\u0060 with a network to look."
+    ],
+    "notIncluded": [
+      {
+        "name": "Osysharp.Conversations.MachineTranslation",
+        "reason": "completes Osysharp.Conversations \u002B Osysharp.MachineTranslation, and this app does not use \u0060Osysharp.Conversations\u0060."
+      }
+    ]
+  }
 }
