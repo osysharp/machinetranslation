@@ -4,5 +4,5 @@ app MachineTranslationKitTests {
   model "model/**/*.osy";
   tests "**/*.test.osy";
   use Osysharp.MachineTranslation@0;
-  use Osysharp.Llm@2;
+  use Osysharp.Llm@3;
 }

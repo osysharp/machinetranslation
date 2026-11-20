@@ -16,11 +16,11 @@
 // ⚑ NOT READY IS A STATE, NOT AN ERROR. With no key (`KeySecret` names a secret that has no value), `IsReady()` is false
 //   and a caller keeps the original — a translator that is down must never stop a message from being written.
 package Osysharp.MachineTranslation {
-  version     "0.4.0";
-  minPlatform "0.14.0";
+  version     "0.5.0";
+  minPlatform "0.22.0";
   summary     "language detection that works offline (scripts, and the commonest words of twelve European languages) and translation through the app's own model — glossary terms kept as written, a missing key a state rather than an error.";
   // Every translation is a call through the model kit: routed, budgeted and metered as the app says.
-  use Osysharp.Llm@2;
+  use Osysharp.Llm@3;
   model "model/*.osy";
   tests "tests";
 }
